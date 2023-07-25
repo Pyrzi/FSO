@@ -6,8 +6,10 @@ import PersonService from './PersonService'
 import Notification from './Notification'
 import axios from 'axios'
 
+const baseUrl = '/api/persons'
+
 axios
-.get('http://localhost:3001/persons')
+.get(baseUrl)
 .then(response => {
   const persons = response.data
 })
@@ -21,19 +23,25 @@ const App = () => {
   const [Message, setMessage] = useState(null)
   
   useEffect(() => {
-    //console.log('effect')
     axios
-      .get('http://localhost:3001/persons')
+      .get(baseUrl)
       .then(response => {
-        //console.log('promise fulfilled')
         setPersons(response.data)
         setFilteredPersons(response.data)
       })
   }, [])
-  //console.log('render', persons.length, 'notes')
 
   const addName = (event) => {
       event.preventDefault()
+
+      if (!newName || !newNumber) {
+        setMessage(`Name or number is missing`)
+          setTimeout(() => {
+            setMessage(null)
+          }, 3000)
+          return
+        }
+
       // If name found
       if (persons.some((person) => person.name === newName)) {
         const existingName = persons.filter(
@@ -76,35 +84,29 @@ const App = () => {
         id: Math.max(...persons.map(person => person.id))+1
       }
 
-      const updatedPersons = persons.concat(personObject)
-      setPersons(updatedPersons)
-
-      const updatedFilteredPersons = updatedPersons.filter((person) =>
-        person.name.toLowerCase().includes(nameFilter.toLowerCase())
-      )
-      setFilteredPersons(updatedFilteredPersons)
+      /*const updatedPersons = persons.concat(personObject)
+      setPersons(updatedPersons)*/
 
       PersonService
         .create(personObject)
         .then((personReturned) => {
           setPersons(persons.concat(personReturned))
+          if (personReturned.name.includes(nameFilter)) {
+          setFilteredPersons(personsFiltered.concat(personReturned)) }
           setMessage(`Added ${newName}`)
           setTimeout(() => {
             setMessage(null)
           }, 3000)
+          setNewName('')
+          setNewNumber('')
         })
         .catch((error) => {
-          setMessage("Action failed")
+          setMessage(error.response.data.error)
           setTimeout(() => {
             setMessage(null)
           }, 3000)
-          console.log("erroR")}
-          )
-
-      setNewName('')
-      setNewNumber('')
+        })
     }
-
 
   const deleteName = (id, name) => {
     if (window.confirm(`Delete ${name}?`)) {
@@ -120,12 +122,11 @@ const App = () => {
         }, 3000)
       })
       .catch((error) => {
-        setMessage(`Action failed`)
+        setMessage(error.response.data.error)
         setTimeout(() => {
           setMessage(null)
         }, 3000)
-        console.log("erroR")}
-        )
+      })
       // updating the list
       const updatedPersons = persons.filter((person) => person.id !== id)
       setPersons(updatedPersons)
@@ -134,6 +135,7 @@ const App = () => {
       )
       setFilteredPersons(updatedFilteredPersons)
     }
+    
     }
   const handleNumberChange = (event) => {
     setNewNumber(event.target.value)
